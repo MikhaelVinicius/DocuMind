@@ -1,4 +1,4 @@
-package com.example.DocuMind;
+package com.documind.DocuMindBack;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
