@@ -1,13 +1,11 @@
-package com.documind.DocuMindBack.config;
+package com.documind.DocuMindBack.document;
 
 
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.store.embedding.EmbeddingStore;
@@ -86,18 +84,6 @@ public class LangChain4jConfig {
     @Bean
     public ChatLanguageModel chatLanguageModel() {
         return OpenAiChatModel.builder()
-                .apiKey(openaiApiKey)
-                .modelName(chatModelName)
-                .temperature(0.7)
-                .timeout(openaiTimeout)
-                .logRequests(true)
-                .logResponses(true)
-                .build();
-    }
-
-    @Bean
-    public StreamingChatLanguageModel streamingChatLanguageModel() {
-        return OpenAiStreamingChatModel.builder()
                 .apiKey(openaiApiKey)
                 .modelName(chatModelName)
                 .temperature(0.7)
