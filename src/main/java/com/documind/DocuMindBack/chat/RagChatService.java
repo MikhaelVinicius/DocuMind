@@ -8,23 +8,20 @@ import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.V;
-import dev.langchain4j.store.memory.chat.ChatMemory;
-import dev.langchain4j.store.memory.chat.MessageWindowChatMemory;
-import lombok.RequiredArgsConstructor;
+import dev.langchain4j.memory.chat.ChatMemoryProvider;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class RagChatService {
 
-    private final StreamingChatLanguageModel streamingChatLanguageModel;
     private final ContentRetriever contentRetriever;
     private final ChatHistoryRepository chatHistoryRepository;
-    private final ChatMemory chatMemory = MessageWindowChatMemory.withMaxMessages(10);
     private final DocuMindAiService aiService;
 
     interface DocuMindAiService {
@@ -41,19 +38,22 @@ public class RagChatService {
     public RagChatService(StreamingChatLanguageModel streamingChatLanguageModel,
                           ContentRetriever contentRetriever,
                           ChatHistoryRepository chatHistoryRepository) {
-        this.streamingChatLanguageModel = streamingChatLanguageModel;
         this.contentRetriever = contentRetriever;
         this.chatHistoryRepository = chatHistoryRepository;
+
+        // Correção: Cria uma memória isolada para cada sessão de chat
+        ChatMemoryProvider chatMemoryProvider = memoryId -> MessageWindowChatMemory.withMaxMessages(10);
+
         this.aiService = AiServices.builder(DocuMindAiService.class)
                 .streamingChatLanguageModel(streamingChatLanguageModel)
                 .contentRetriever(contentRetriever)
-                .chatMemory(chatMemory)
+                .chatMemoryProvider(chatMemoryProvider)
                 .build();
     }
 
     public Flux<String> chatWithRag(UUID sessionId, String userQuestion) {
         List<TextSegment> relevantSegments = contentRetriever.retrieve(dev.langchain4j.rag.query.Query.from(userQuestion)).stream()
-                .map(content -> TextSegment.from(content.text(), content.metadata()))
+                .map(dev.langchain4j.rag.content.Content::textSegment)
                 .collect(Collectors.toList());
 
         String context = relevantSegments.stream()
@@ -70,12 +70,12 @@ public class RagChatService {
         chatHistoryRepository.save(new ChatHistory(sessionId, ChatHistory.MessageType.USUARIO, userQuestion, null));
 
         StringBuilder aiResponseBuilder = new StringBuilder();
-        String[] referencedDocumentIds = relevantSegments.stream()
+        List<String> referencedDocumentIds = relevantSegments.stream()
                 .map(segment -> segment.metadata().get("document_id"))
                 .filter(java.util.Objects::nonNull)
                 .map(Object::toString)
                 .distinct()
-                .toArray(String[]::new);
+                .collect(Collectors.toList());
 
         return aiService.chat(userQuestion, sessionId, context)
                 .doOnNext(aiResponseBuilder::append)

@@ -1,6 +1,5 @@
 package com.documind.DocuMindBack.chat;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -8,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -15,6 +15,7 @@ import java.util.UUID;
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
 @Slf4j
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class ChatController {
 
     private final RagChatService ragChatService;
@@ -25,8 +26,9 @@ public class ChatController {
         return ResponseEntity.ok(history);
     }
 
-    @PostMapping(value = "/{sessionId}/ask", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> askQuestion(@PathVariable UUID sessionId, @RequestBody String question) {
+    // Correção: Mapeado como GET para funcionar com a API EventSource do navegador
+    @GetMapping(value = "/{sessionId}/ask", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> askQuestion(@PathVariable UUID sessionId, @RequestParam String question) {
         log.info("Recebida pergunta para sessão {}: {}", sessionId, question);
         return ragChatService.chatWithRag(sessionId, question)
                 .map(token -> ServerSentEvent.<String>builder()

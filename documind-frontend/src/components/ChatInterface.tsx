@@ -71,7 +71,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId, onShowSources 
     setError(null);
 
     try {
-      const eventSource = new EventSource(`http://localhost:8080/api/chat/${sessionId}/ask`);
+      // Correção: Passando a pergunta por query params para o backend (método GET)
+      const eventSource = new EventSource(`http://localhost:8080/api/chat/${sessionId}/ask?question=${encodeURIComponent(userMessage.text)}`, {
+        withCredentials: true,
+      });
+
       let aiResponseText = '';
       const aiMessageId = Date.now().toString() + '-ai';
 
@@ -105,31 +109,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId, onShowSources 
         console.error('EventSource failed:', err);
         eventSource.close();
         setIsTyping(false);
-        setError('Erro na conexão com o chat. Tente novamente.');
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.sender === 'ai' && lastMessage.id === aiMessageId) {
-            return prev;
-          } else {
-            return [
-              ...prev,
-              {
-                id: Date.now().toString(),
-                sender: 'ai',
-                text: 'Desculpe, houve um erro ao gerar a resposta. Por favor, tente novamente.',
-                timestamp: new Date().toLocaleTimeString(),
-              },
-            ];
-          }
-        });
-      };
-
-      eventSource.onopen = () => {
-        console.log('EventSource connected.');
       };
 
       eventSource.addEventListener('end', () => {
-        console.log('Streaming ended by backend.');
         eventSource.close();
         setIsTyping(false);
       });
@@ -170,10 +152,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId, onShowSources 
                   <span className="ml-2 text-xs text-gray-400">{msg.timestamp}</span>
                 </div>
                 <div className="prose prose-invert max-w-none">
-  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-    {msg.text}
-  </ReactMarkdown>
-</div>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.text}
+                  </ReactMarkdown>
+                </div>
                 {msg.sender === 'ai' && msg.referencedDocuments && msg.referencedDocuments.length > 0 && (
                   <button
                     onClick={() => onShowSources(msg.referencedDocuments || [])}

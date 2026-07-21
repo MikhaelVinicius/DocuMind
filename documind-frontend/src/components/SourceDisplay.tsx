@@ -6,16 +6,14 @@ interface SourceDisplayProps {
   onClose: () => void;
 }
 
-interface DocumentChunkDetail {
+interface DocumentDetail {
   id: string;
-  documentName: string;
-  conteudoTexto: string;
-  numeroPagina?: number;
+  nome: string;
+  tamanhoBytes: number;
 }
 
 const SourceDisplay: React.FC<SourceDisplayProps> = ({ documentIds, onClose }) => {
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [sourcesDetails, setSourcesDetails] = useState<DocumentChunkDetail[]>([]);
+  const [sourcesDetails, setSourcesDetails] = useState<DocumentDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,17 +22,19 @@ const SourceDisplay: React.FC<SourceDisplayProps> = ({ documentIds, onClose }) =
       setLoading(true);
       setError(null);
       try {
-        // Simulação de busca de detalhes dos chunks/documentos
-        const simulatedDetails: DocumentChunkDetail[] = documentIds.map((id, index) => ({
-          id: id,
-          documentName: `Documento Referência ${index + 1}.pdf`,
-          conteudoTexto: `Este é um trecho de texto simulado do documento com ID ${id}. Ele demonstra o contexto recuperado do vetor de embeddings para fundamentar a resposta da IA.`,
-          numeroPagina: index + 1,
-        }));
-        setSourcesDetails(simulatedDetails);
+        const response = await fetch('http://localhost:8080/api/documents/details', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(documentIds)
+        });
+        
+        if (!response.ok) throw new Error("Erro na comunicação com o servidor.");
+        
+        const data = await response.json();
+        setSourcesDetails(data);
       } catch (err: any) {
         console.error('Erro ao buscar detalhes das fontes:', err);
-        setError('Não foi possível carregar os detalhes das fontes.');
+        setError('Não foi possível carregar os detalhes das fontes reais.');
       } finally {
         setLoading(false);
       }
@@ -48,15 +48,11 @@ const SourceDisplay: React.FC<SourceDisplayProps> = ({ documentIds, onClose }) =
     }
   }, [documentIds]);
 
-  const toggleExpand = (id: string) => {
-    setExpanded(expanded === id ? null : id);
-  };
-
   if (loading) {
     return (
       <div className="p-4 bg-dark-card rounded-lg shadow-lg mt-4 text-center text-gray-400 flex items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-dark-accent" />
-        Carregando fontes...
+        Buscando documentos base...
       </div>
     );
   }
@@ -69,47 +65,23 @@ const SourceDisplay: React.FC<SourceDisplayProps> = ({ documentIds, onClose }) =
     );
   }
 
-  if (sourcesDetails.length === 0) {
-    return (
-      <div className="p-4 bg-dark-card rounded-lg shadow-lg mt-4 text-center text-gray-400">
-        Nenhuma fonte detalhada disponível.
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 bg-dark-card rounded-lg shadow-lg mt-4 border border-gray-700">
       <h3 className="text-xl font-bold text-dark-text mb-3 flex items-center justify-between">
-        Fontes Utilizadas
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-dark-accent text-sm font-normal flex items-center transition-colors"
-        >
-          <X className="h-4 w-4 mr-1" />
-          Fechar
+        Documentos Base Consultados
+        <button onClick={onClose} className="text-gray-400 hover:text-dark-accent text-sm font-normal flex items-center transition-colors">
+          <X className="h-4 w-4 mr-1" /> Fechar
         </button>
       </h3>
       {sourcesDetails.map((source) => (
-        <div key={source.id} className="border border-gray-700 rounded-md mb-2 overflow-hidden">
-          <button
-            className="w-full flex justify-between items-center p-3 bg-gray-800 hover:bg-gray-700 transition-colors text-left"
-            onClick={() => toggleExpand(source.id)}
-          >
-            <span className="flex items-center text-dark-text font-medium text-sm">
+        <div key={source.id} className="border border-gray-700 rounded-md mb-2 overflow-hidden p-3 bg-gray-800 text-left">
+            <span className="flex items-center text-dark-text font-medium text-sm mb-1">
               <FileText className="h-4 w-4 mr-2 text-dark-highlight flex-shrink-0" />
-              {source.documentName} {source.numeroPagina && `(Pág. ${source.numeroPagina})`}
+              {source.nome}
             </span>
-            {expanded === source.id ? (
-              <ChevronUp className="h-5 w-5 text-gray-400 flex-shrink-0" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-gray-400 flex-shrink-0" />
-            )}
-          </button>
-          {expanded === source.id && (
-            <div className="p-3 border-t border-gray-700 bg-dark-bg text-gray-300 text-sm">
-              <p className="whitespace-pre-wrap">{source.conteudoTexto}</p>
-            </div>
-          )}
+            <span className="text-xs text-gray-400 ml-6">
+               ID Referência: {source.id.substring(0, 8)}... | Tamanho: {(source.tamanhoBytes / 1024).toFixed(2)} KB
+            </span>
         </div>
       ))}
     </div>

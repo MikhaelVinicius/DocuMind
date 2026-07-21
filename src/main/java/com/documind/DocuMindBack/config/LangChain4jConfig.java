@@ -69,9 +69,8 @@ public class LangChain4jConfig {
     }
 
     @Bean
-    public EmbeddingStore<TextSegment> embeddingStore(DataSource dataSource) {
+    public EmbeddingStore<TextSegment> embeddingStore() {
         return PgVectorEmbeddingStore.builder()
-                .dataSource(dataSource)
                 .host(pgvectorHost)
                 .port(pgvectorPort)
                 .database(pgvectorDatabase)

@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -31,15 +33,17 @@ public class ChatHistory {
     @Column(name = "data_hora", nullable = false)
     private LocalDateTime dataHora;
 
-    @Column(name = "documentos_referenciados", columnDefinition = "TEXT[]")
-    private String[] documentosReferenciados;
+    // Correção: Mapeamento relacional simples para listas no PostgreSQL
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "historico_chat_documentos", joinColumns = @JoinColumn(name = "chat_history_id"))
+    @Column(name = "documento_id")
+    private List<String> documentosReferenciados;
 
     public enum MessageType {
-        USUARIO,
-        IA
+        USUARIO, IA
     }
 
-    public ChatHistory(UUID sessaoId, MessageType tipoMensagem, String conteudoMensagem, String[] documentosReferenciados) {
+    public ChatHistory(UUID sessaoId, MessageType tipoMensagem, String conteudoMensagem, List<String> documentosReferenciados) {
         this.sessaoId = sessaoId;
         this.tipoMensagem = tipoMensagem;
         this.conteudoMensagem = conteudoMensagem;
